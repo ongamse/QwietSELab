@@ -1,40 +1,51 @@
 import json
 import sys
 
-# Define mappings for severity customization and the findings data (mock example).
-severity_mapping = {
-    "error": "high",  # Or "critical" if applicable
-    # Add mappings for other severity levels if needed
+# Define a mapping from SARIF severities to GitHub SARIF levels
+severity_to_level = {
+    "critical": "error",
+    "high": "error",
+    "medium": "warning",
+    "low": "note",
+    "info": "note"
 }
 
-def customize_sarif(input_sarif_path, output_sarif_path, findings_data):
-    with open(input_sarif_path, 'r') as file:
+def customize_sarif(input_sarif, output_sarif, findings):
+    with open(input_sarif, 'r') as file:
         sarif_data = json.load(file)
 
-    # Loop through results to update severities and IDs
     for run in sarif_data.get("runs", []):
         for result in run.get("results", []):
-            # Map severity level
-            sarif_severity = result["level"]
-            custom_severity = severity_mapping.get(sarif_severity, sarif_severity)
-            result["level"] = custom_severity
+            finding_id = result.get("ruleId")
+
+            # Check if finding ID exists in findings
+            if finding_id in findings:
+                custom_severity = findings[finding_id]["severity"]
+                result["level"] = severity_to_level.get(custom_severity, "error")
+                
+                # Prefix message with severity and alert ID
+                alert_id = findings[finding_id]["id"]
+                result["message"]["text"] = f"[{custom_severity.upper()}] Alert #{alert_id}: {result['message']['text']}"
+            else:
+                # Fallback to SARIF's own severity if no custom severity is available
+                sarif_severity = result.get("severity", "info").lower()
+                result["level"] = severity_to_level.get(sarif_severity, "note")
             
-            # Map finding ID to alert number
-            finding_id = findings_data.get(result.get("ruleId"))
-            if finding_id:
-                result["ruleId"] = finding_id
+            # Log if severity does not match expected levels
+            if "level" not in result:
+                print(f"Warning: No level set for finding ID {finding_id}")
 
-    with open(output_sarif_path, 'w') as file:
+    with open(output_sarif, 'w') as file:
         json.dump(sarif_data, file, indent=2)
-    print(f"SARIF customization complete. Output saved to {output_sarif_path}")
 
-# Usage
+# Example findings dictionary (replace with actual findings data)
+findings = {
+    "finding-1": {"severity": "high", "id": "465"},
+    "finding-2": {"severity": "critical", "id": "789"},
+    # Add more finding IDs as needed
+}
+
 if __name__ == "__main__":
     input_sarif = sys.argv[1]
     output_sarif = sys.argv[2]
-    findings = {
-        "alert-1": "finding-001",
-        "alert-2": "finding-002"
-        # Populate findings with actual ruleId and finding ID mappings
-    }
     customize_sarif(input_sarif, output_sarif, findings)
