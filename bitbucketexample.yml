@@ -1,0 +1,18 @@
+image: shiftleft/core
+
+pipelines:
+  default:
+    - step:    
+        name: Build the code
+        caches:
+          - maven
+        script: # Modify the commands below to build your repository.
+          - mvn clean package
+        artifacts:
+          - target/hello-shiftleft-0.0.1.jar #replace with your path
+          # - sl-analysis.sh
+    - step:
+        name: Qwiet.AI analysis
+        script:
+          - echo $BITBUCKET_CLONE_DIR $BITBUCKET_COMMIT $BITBUCKET_BRANCH $BITBUCKET_REPO_SLUG
+          - sl analyze --version-id "$BITBUCKET_COMMIT"  --app "Qwiet-java-BB2" --verbose --wait --strict .

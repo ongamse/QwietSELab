@@ -1,0 +1,51 @@
+image: python:3.8-buster
+
+stages:
+  - build
+  - test
+
+variables:
+  # This can be used to set up a virtual environment
+  SHIFTLEFT_ACCESS_TOKEN: $SHIFTLEFT_ACCESS_TOKEN
+  MR_TOKEN: $MR_TOKEN
+  VIRTUAL_ENV: .venv
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+before_script:
+  - apt-get update && apt-get install -y python3 python3-pip git
+  #- python3 -m venv .venv
+  #- source .venv/bin/activate
+  #- pip install --upgrade pip --break-system-packages
+  - pip install -r requirements.txt --break-system-packages
+
+cache:
+  paths:
+    - .cache/pip
+    - $VIRTUAL_ENV
+
+build:
+  stage: build
+  script:
+    - echo "Building the project..."
+    #- python run.py
+
+qwietAI_preZero:
+  stage: test
+  dependencies: 
+    - build
+  image: ubuntu:latest
+  script:
+    # Ensure curl and jq are installed
+    #- apt update && apt install -y curl jq
+    #- curl https://npmjs.org/install.sh | sh
+    #- pwd
+    # Install sl
+    - apt-get update && apt-get install -y curl
+    - curl https://cdn.shiftleft.io/download/sl >/usr/local/bin/sl && chmod a+rx /usr/local/bin/sl
+    # Run preZero script
+    #- apt-get update -qq && apt-get install -y dos2unix
+    #- dos2unix sl-analysis.sh
+    #- chmod +x sl-analysis.sh
+    #- ./sl-analysis.sh
+    - sl analyze --app Qwiet-python-GL3
+
